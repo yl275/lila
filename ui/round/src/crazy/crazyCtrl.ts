@@ -5,6 +5,7 @@ import type { MouchEvent } from '@lichess-org/chessground/types';
 import { isPlayerTurn } from 'lib/game';
 import { pubsub } from 'lib/pubsub';
 import { storage } from 'lib/storage';
+import { alert } from 'lib/view';
 
 import type RoundController from '../ctrl';
 import type { RoundData } from '../interfaces';
@@ -61,6 +62,19 @@ export function onEnd(): void {
 export const crazyKeys: Array<number> = [];
 
 export function init(ctrl: RoundController): void {
+  if (!ctrl.data.player.spectator) {
+    const user = ctrl.data.player.user;
+    const variantGames = user?.perfs?.[ctrl.data.game.perf]?.games;
+    if (variantGames === 0) {
+      // First-time logged-in crazyhouse player: server data confirms 0 games
+      alert(`${i18n.variant.crazyhouse}\n\n${i18n.variant.crazyhouseTitle}`);
+    } else if (!user && !storage.get('crazyhouse.warned')) {
+      // Anonymous player: use localStorage to avoid repeating the warning
+      storage.make('crazyhouse.warned').set('1');
+      alert(`${i18n.variant.crazyhouse}\n\n${i18n.variant.crazyhouseTitle}`);
+    }
+  }
+
   const k = site.mousetrap;
 
   let activeCursor: string | undefined;
