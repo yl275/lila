@@ -148,7 +148,22 @@ final class RelayPager(
         )
       ).some,
       sortFields = List("searchDate")
-    )
+    ).flatMap: pager =>
+      // Fall back to a case-insensitive name regex search when the text search yields no results.
+      // This handles partial word prefixes that MongoDB's English stemmer fails to match
+      // (e.g. "Candi" won't stem to the same root as "Candidates", but "Candid" will).
+      if pager.nbResults > 0 then fuccess(pager)
+      else
+        val nameSelector =
+          $doc("name".$regex(java.util.regex.Pattern.quote(textSearch), "i")) ++
+            nameFilter ++
+            selectors.officialPublic
+        forSelector(
+          selector = nameSelector,
+          page = page,
+          onlyKeepGroupFirst = false,
+          sortFields = List("syncedAt")
+        )
 
   def byIds(ids: List[RelayTourId], page: Int): Fu[Paginator[WithLastRound]] =
     forSelector(
